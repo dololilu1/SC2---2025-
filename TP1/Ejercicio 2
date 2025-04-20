@@ -47,7 +47,7 @@ for i= 1: 20000-1
     end 
 end 
 
-% Aplicación del método de CHEN 
+% Aplicación del método de CHEN para el voltaje en el Capacitor
 % Elijo 3 puntos equidistantes (en tiempo) en la grafica de la respuesta al
 % escalon del voltaje del capacitor (tercera columna de excel):
 t1_v = valores(1050,1);        y1_v = valores (1050,3);
@@ -113,4 +113,97 @@ plot(tiempo,Vc,'b'); title('Voltaje en el capacitor segun Excel'); grid on; hold
 plot(t_G_v, y_G_v,'k') ; title('G_v obtenida con el metodo de CHEN vs tensiones de tabla');
 
 % La aproximación se considera aceptable 
+
+% Aplicación del método de CHEN para la corriente 
+t1_i = valores(1002,1);      y1_i = valores(1002,2);
+t2_i = valores(1003,1);      y2_i = valores(1003,2);
+t3_i = valores(1004,1);      y3_i = valores(1004,2);
+
+%Ademas debo elegir un cuarto punto para normalizar la ganancia:
+t4_i = valores(5000,1);      y4_i = valores(5000,2);
+
+figure(2)
+plot([t1_i t2_i t3_i t4_i],[y1_i y2_i y3_i y4_i], '*'); hold on;
+
+K_i = valores(5000,2)/12
+
+% Necesito normalizar la altura de todos los puntos elegidos antes de
+% usarlos en el metodo de CHEN porque se supone que tengo una entrada
+% escalon unitaria:
+y1_i = y1_i/12;     
+y2_i = y2_i/12;     
+y3_i = y3_i/12; 
+
+% Coeficientes k:
+k1_i = (y1_i/K_i)-1
+k2_i = (y2_i/K_i)-1
+k3_i = (y3_i/K_i)-1
+
+%Calculo el parametro b:
+b_i=((4)*(k1_i^3)*(k3_i))-((3)*(k1_i^2)*(k2_i^2))-((4)*(k2_i^3))+(k3_i^2)+((6)*(k1_i)*(k2_i)*(k3_i))
+
+%Calculo de alfa 1:
+alfa1_i=((k1_i*k2_i)+(k3_i)-(sqrt(b_i)))/(2*((k1_i^2)+(k2_i)))
+
+%Calculo alfa 2
+alfa2_i=((k1_i*k2_i)+(k3_i)+(sqrt(b_i)))/(2*((k1_i^2)+(k2_i)))
+
+%Calculo de Beta_i:
+Beta_i = (k1_i+alfa2_i)/(alfa1_i-alfa2_i)
+
+%Calculo la constante de tiempo T1:
+T1_i = -(t1_i-0.01)/(log(alfa1_i))
+
+%Calculo la constante de tiempo T2:
+T2_i = -(t1_i-0.01)/(log(alfa2_i))
+
+%Calculo la constante de tiempo T3:
+T3_i = (Beta_i*(T1_i-T2_i))+(T1_i)
+
+G_i = tf(K_i*[T3_i 1],conv([T1_i  1],[T2_i  1]))
+
+[y_G_i , t_G_i] = lsim(G_i , u , t); % A la funcion de transferencia de la 
+% corriente le aplico la entrada u en el tiempo t y sus coordenadas las 
+% guardo en 2 vectores que despues voy a plotear
+
+figure(7)
+plot(tiempo,I,'red'); title('Corriente'); grid on; hold on;
+plot(t_G_i,y_G_i,'b'); title('Rojo:excel    Vs   Azul:chen ');
+
+% Aproximación aceptable 
+
+% CÁLCULO DE LOS VALORES DE CAPACIDAD, INDUCTANCIA Y RESISTENCIA
+% G_i(s) = sCap / [LCap*s^2 + RCap*s + 1]
+
+% Parámetros de la función de transferencia de corriente G_i
+% Numerador: K_i (T3*s + 1)
+% Denominador: L*C*s^2 + R*C*s + 1
+
+% Coeficientes obtenidos de G_i
+ LC = 1.076e-9;        % Coef. de s^2
+ RC = 0.0004839;       % Coef. de s
+ C  = 2.78e-6;          % Coef. frente a T3*s + 1 (ganancia estática)
+
+% Cálculo de L y R
+L = LC / C
+R = RC / C
+
+% Verificación de los resultados 
+
+A = [-R/L  -1/L  ;  1/C   0];  % MATRIZ DE ESTADOS
+B = [ 1/L  ;  0];     % MATRIZ DE ENTRADA
+C = [ 1 0]        % MATRIZ DE SALIDA aca le designo 1 porque solo estoy diciendo cual sera la salida 
+D =  0 ;      % MATRIZ DE TRANSMISION DIRECTA
+
+% FUNCIÓN DE TRANSFERENCIA;
+[num,den] = ss2tf(A,B,C,D)
+F = tf(num,den)
+
+% Vector con valores de x e y para simular mi funcion de
+% transferencia creada con los valores R L C calculados en el ejercicio 2:
+[ejeT,ejeY]=lsim(F,u,t);
+
+figure(5)
+plot(tiempo,I,'r','LineWidth',2);  grid on; hold on;
+plot(ejeY,ejeT,'b','LineWidth',2); title('Validación de R L C '); grid on; hold on;
 
