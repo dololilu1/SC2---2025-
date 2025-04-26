@@ -46,8 +46,8 @@ tpact = tp/100 % Lo divido por 100 para mejorar la resolución: tp actualizado
 % que me permite ver la dinamica mas lenta:
 tsim = log(0.05)/(real(polos(1)))
 
-% Obtengo un valor de 13, 6 ms. Sin embargo, voy a optar por utilizar 40
-% ms, para poder visualizar 4 cambios de signo con mi entrada escalón. 
+% Obtengo un valor de 13, 6 ms. Sin embargo, voy a optar por utilizar 50
+% ms, para poder visualizar 5 cambios de signo con mi entrada escalón. 
 tsim = 50e-3 
 
 %__________________________________________________________________
