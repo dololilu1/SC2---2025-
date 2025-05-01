@@ -9,7 +9,7 @@ clear all; clc; close all
 
 % Lectura de datos 
 valores = xlsread ("Curvas_Medidas_Motor_2025_v.xls"); 
-tiempo = valores (1:end, 1); % Tiempo (s)
+t = valores (1:end, 1); % Tiempo (s)
 w = valores (1:end, 2); % Velocidad angular (rad/s) 
 ia = valores (1:end, 3); % Corriente en armadura (A)
 va = valores (1:end, 4); % Tensión (V)
@@ -19,124 +19,66 @@ Vin = 2;
 % Gráfica de la velocidad angular (según Excel)
 figure (1)
 subplot (4,1,1)
-plot (tiempo, w, "b");
+plot (t, w, "b");
 title ("Velocidad angular según Excel (rad/s)"); grid on; hold on; 
 
 % Gráfica de la corriente de armadura (según Excel)
 subplot (4,1,2)
-plot (tiempo, ia, "m"); 
+plot (t, ia, "m"); 
 title ("Corriente de armadura según Excel (A)"); grid on; hold on; 
 
 % Gráfica de la tensión de entrada (según Excel) 
 subplot (4,1,3)
-plot (tiempo, va, "r"); 
+plot (t, va, "r"); 
 title ("Tensión de entrada según Excel (V)"); grid on; hold on; 
 
 % Gráfica del torque (según Excel) 
 subplot (4,1,4)
-plot (tiempo, Tl, "g"); 
-title ("Torque según Excel"); grid on; hold on; 
+plot (t, Tl, "g"); 
+title ("Torque según Excel (N.m/V)"); grid on; hold on; 
 
-% MÉTODO DE CHEN para la Velocidad Angular ---- ♥ G_w = (w)/(Va)
+% MÉTODO DE CHEN para la Velocidad Angular ---- G_w = (w)/(Va)
 
-% 1: Elijo 3 puntos equisdistantes según la gráfica de velocidad angular 
-t1_w = valores (110,1);        y1_w = valores (110,2);
-t2_w = valores (120,1);        y2_w = valores (120,2);
-t3_w = valores (130,1);        y3_w = valores (130,2);
+y1 = w(110)/Vin;
+t1 = t(110); %t1
 
-% 2: Elijo 1 punto (ganancia) para normalizar 
-t4_w = valores (705,1);        y4_w = valores (705,2); 
+y2 = w(120)/Vin;
+t2 = t(120); %t2
 
-% 3: Normalización 
-k_w = y4_w/Vin; % Ganancia
-y1_w = y1_w/Vin; 
-y2_w = y2_w/Vin; 
-y3_w = y3_w/Vin; 
+y3 = w(130)/Vin;
+t3 = t(130); %t3
 
-% 4: Cálculo de k1, k2, k3 
-k1 = (y1_w/k_w)-1;
-k2 = (y2_w/k_w)-1;
-k3 = (y3_w/k_w)-1; 
+% Tiempo entre muestras
+ts = t2 - t1;
 
-% 5: Cálculo de b 
-b=((4)*(k1^3)*(k3))-((3)*(k1^2)*(k2^2))-((4)*(k2^3))+(k3^2)+((6)*(k1)*(k2)*(k3));
+% K=y(00)/U
+k = w(end)/Vin;
 
-% 6: Cálculo de alfas 
-alfa1 = ((k1*k2)+(k3)-(sqrt(b)))/(2*((k1^2)+(k2))); 
-alfa2 = ((k1*k2)+(k3)+(sqrt(b)))/(2*((k1^2)+(k2))); 
+%Funcion de la forma G(s)=K*(s*T3)/[(s*T1+1).(s*T2+1)] luego se puede
+%despreciar el cero
 
-% 7: Cálculo de beta 
-Beta=(k1+alfa2)/(alfa1-alfa2); 
-
-%Calculo la constante de tiempo T1:
-T1= -((t1_w)/(log(alfa1)))
-
-%Calculo la constante de tiempo T2:
-T2= -(t1_w)/(log(alfa2))
-
-%Calculo la constante de tiempo T3:
-T3= (Beta*(T1-T2))+(T1)
+k1      =       y1/k-1;
+k2      =       y2/k-1;
+k3      =       y3/k-1;
+b       =       4*k1^3*k3-3*k1^2*k2^2-4*k2^3+k3^2+6*k1*k2*k3;
+alfa1   =       (k1*k2+k3-sqrt(b))/(2*(k1^2+k2));
+alfa2   =       (k1*k2+k3+sqrt(b))/(2*(k1^2+k2));
+beta    =       (2*k1^3+3*k1*k2+k3-sqrt(b))/(sqrt(b));
+T1      =       (-ts/log(alfa1));
+T2      =       (-ts/log(alfa2));
 
 T1 = real(T1)
 T2 = real(T2) % Importa solo la parte real
-T3 = real(Beta*(T1-T2)+T1);
+T3 = real(beta*(T1-T2)+T1);
 
-% Función de transferencia calculada por el método de CHEN 
-G_w = tf(k_w*[T3 1],conv([T1 1],[T2 1])) %   G_w = (w)/(Va)
-
-% MÉTODO DE CHEN para la corriente ---- ♥ G_ia = (ia)/(Va)
-
-% 1: Elijo 3 puntos equisdistantes según la gráfica de corriente de armadura  
-t1_ia = valores (110,1);        y1_ia = valores (110,3);
-t2_ia = valores (120,1);        y2_ia = valores (120,3);
-t3_ia = valores (130,1);        y3_ia = valores (130,3);
-
-% 2: Elijo 1 punto (ganancia) para normalizar 
-t4_ia = valores (109,1);        y4_ia = valores (109,3); 
-
-% 3: Normalización 
-k_ia = y4_ia/Vin; % Ganancia
-y1_ia = y1_ia/Vin; 
-y2_ia = y2_ia/Vin; 
-y3_ia = y3_ia/Vin; 
-
-% 4: Cálculo de k1, k2, k3 
-k1 = (y1_ia/k_ia)-1;
-k2 = (y2_ia/k_ia)-1;
-k3 = (y3_ia/k_ia)-1; 
-
-% 5: Cálculo de b 
-b=((4)*(k1^3)*(k3))-((3)*(k1^2)*(k2^2))-((4)*(k2^3))+(k3^2)+((6)*(k1)*(k2)*(k3));
-
-% 6: Cálculo de alfas 
-alfa1 = ((k1*k2)+(k3)-(sqrt(b)))/(2*((k1^2)+(k2))); 
-alfa2 = ((k1*k2)+(k3)+(sqrt(b)))/(2*((k1^2)+(k2))); 
-
-% 7: Cálculo de beta 
-Beta=(k1+alfa2)/(alfa1-alfa2); 
-
-%Calculo la constante de tiempo T1:
-T1= -((t1_ia)/(log(alfa1)))
-
-%Calculo la constante de tiempo T2:
-T2= -(t1_ia)/(log(alfa2))
-
-%Calculo la constante de tiempo T3:
-T3= (Beta*(T1-T2))+(T1)
-
-T1 = real(T1)
-T2 = real(T2) % Importa solo la parte real
-T3 = real(Beta*(T1-T2)+T1);
-
-% Función de transferencia calculada por el método de CHEN 
-G_ia = tf(k_ia*[T3 1],conv([T1 1],[T2 1]))
+G_wv = tf(k,conv([T1 1],[T2 1])) % Funcion de transferencia W/Va
 
 % Observando la forma general para las funciones de transferencia de un
 % motor CC obtengo: 
 
 Ki = 0.2769;
 J  = 0.0028;
-B = 0;                         % se lo puede aproximar a 0
+B = 0;
 La = 0.0055;
 Ra = 2.4136;
 Km = 0.2625;
@@ -183,11 +125,11 @@ end
 
 figure;
 subplot(2,1,1);
-plot(tiempo, w, 'm', tiempo, w_sim, 'k--'); grid on;
+plot(t, w, 'm', t, w_sim, 'k--'); grid on;
 title('Velocidad angular \omega [rad/s]');
 legend('Medida', 'Simulada');
 
 subplot(2,1,2);
-plot(tiempo, ia, 'm', tiempo, ia_sim, 'k--'); grid on;
+plot(t, ia, 'm', t, ia_sim, 'k--'); grid on;
 title('Corriente de armadura i_a [A]');
 legend('Medida', 'Simulada');
